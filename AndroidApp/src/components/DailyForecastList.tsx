@@ -4,9 +4,10 @@ import { localDateFromISODate } from '../utils/date';
 
 type Props = {
   forecast: DailyForecast;
+  onDayClick?: (date: string) => void;
 };
 
-export function DailyForecastList({ forecast }: Props) {
+export function DailyForecastList({ forecast, onDayClick }: Props) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -37,7 +38,11 @@ export function DailyForecastList({ forecast }: Props) {
           const dateLabel = formatDate(day.date, index);
           
           return (
-            <div key={day.date} className="daily-item">
+            <div 
+              key={day.date} 
+              className="daily-item clickable"
+              onClick={() => onDayClick?.(day.date)}
+            >
               <div className="daily-date">{dateLabel}</div>
               <div className="daily-icon" title={condition} aria-label={condition}>{icon}</div>
               <div className="daily-precip">

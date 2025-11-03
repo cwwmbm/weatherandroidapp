@@ -28,6 +28,12 @@ export function PullToRefresh({ onRefresh, children }: Props) {
     };
 
     const handleTouchStart = (e: TouchEvent) => {
+      // Don't interfere if touching inside hourly screen or other overlays
+      const target = e.target as HTMLElement;
+      if (target.closest('.day-hourly-screen') || target.closest('.search-dropdown')) {
+        return;
+      }
+      
       // Only allow pull-to-refresh when at the top of the scroll
       if (isAtTop()) {
         isDragging = true;
@@ -39,6 +45,13 @@ export function PullToRefresh({ onRefresh, children }: Props) {
 
     const handleTouchMove = (e: TouchEvent) => {
       if (!isDragging) return;
+
+      // Don't interfere if touching inside hourly screen or other overlays
+      const target = e.target as HTMLElement;
+      if (target.closest('.day-hourly-screen') || target.closest('.search-dropdown')) {
+        isDragging = false;
+        return;
+      }
 
       currentYRef.current = e.touches[0].clientY;
       const deltaY = currentYRef.current - startYRef.current;
@@ -86,6 +99,12 @@ export function PullToRefresh({ onRefresh, children }: Props) {
 
     // Also handle mouse events for desktop testing
     const handleMouseDown = (e: MouseEvent) => {
+      // Don't interfere if clicking inside hourly screen or other overlays
+      const target = e.target as HTMLElement;
+      if (target.closest('.day-hourly-screen') || target.closest('.search-dropdown')) {
+        return;
+      }
+      
       if (isAtTop() && e.button === 0) {
         isDragging = true;
         hasTriggered = false;
@@ -96,6 +115,14 @@ export function PullToRefresh({ onRefresh, children }: Props) {
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
+      
+      // Don't interfere if clicking inside hourly screen or other overlays
+      const target = e.target as HTMLElement;
+      if (target.closest('.day-hourly-screen') || target.closest('.search-dropdown')) {
+        isDragging = false;
+        return;
+      }
+      
       currentYRef.current = e.clientY;
       const deltaY = currentYRef.current - startYRef.current;
 

@@ -5,6 +5,7 @@ import { HourlyRow } from './components/HourlyRow';
 import { NowSection } from './components/NowSection';
 import { HourlyForecastSection } from './components/HourlyForecastSection';
 import { DailyForecastList } from './components/DailyForecastList';
+import { DayHourlyModal } from './components/DayHourlyModal';
 import { localDateTimeFromISOMinute } from './utils/date';
 import { SearchBox } from './components/SearchBox';
 import { SaveLocationButton } from './components/SaveLocationButton';
@@ -17,6 +18,7 @@ function App() {
   const [hourly, setHourly] = useState<HourlyForecast | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   // Start with null coordinates - will be set after geolocation
   const [coords, setCoords] = useState<{ latitude: number; longitude: number; label: string } | null>(null);
@@ -73,7 +75,7 @@ function App() {
     try {
       const [dailyData, hourlyData] = await Promise.all([
         fetchDailyForecast({ latitude: coords.latitude, longitude: coords.longitude, days: 14 }),
-        fetchHourlyForecast({ latitude: coords.latitude, longitude: coords.longitude, hours: 48 })
+        fetchHourlyForecast({ latitude: coords.latitude, longitude: coords.longitude, hours: 240 }) // 10 days * 24 hours
       ]);
       
       console.log('Weather data received for coordinates:', coords.latitude, coords.longitude);
@@ -143,11 +145,22 @@ function App() {
             <>
               <NowSection hourly={hourly} today={forecast.days[0] || null} />
               <HourlyForecastSection hourly={hourly} />
-              <DailyForecastList forecast={forecast} />
+              <DailyForecastList 
+                forecast={forecast} 
+                onDayClick={(date) => setSelectedDay(date)}
+              />
             </>
           )}
         </main>
       </PullToRefresh>
+      {selectedDay && hourly && forecast && (
+        <DayHourlyModal 
+          date={selectedDay} 
+          hourly={hourly}
+          dailyDay={forecast.days.find(day => day.date === selectedDay) || null}
+          onClose={() => setSelectedDay(null)} 
+        />
+      )}
       <footer className="app-footer">
         <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Data by Open‑Meteo</a>
       </footer>

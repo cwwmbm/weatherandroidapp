@@ -88,6 +88,12 @@ export async function fetchHourlyForecast({ latitude, longitude, hours }: FetchH
   url.searchParams.set('hourly', 'weathercode,temperature_2m,precipitation,precipitation_probability,is_day');
   url.searchParams.set('timezone', 'America/Vancouver');
   url.searchParams.set('temperature_unit', 'celsius');
+  // Request forecast_days to ensure we get enough data
+  if (hours && hours > 168) {
+    // Calculate how many days we need (hours / 24, rounded up)
+    const forecastDays = Math.ceil(hours / 24);
+    url.searchParams.set('forecast_days', String(Math.min(forecastDays, 14)));
+  }
 
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Open-Meteo error: ${res.status}`);
