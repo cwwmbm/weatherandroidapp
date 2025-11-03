@@ -112,6 +112,9 @@ export function SearchBox({ onPick, currentLocation, onSelectCurrentLocation }: 
 
   return (
     <div className="searchbox">
+      {open && (
+        <div className="search-backdrop" />
+      )}
       <input
         className="search-input"
         placeholder="Search city or town…"

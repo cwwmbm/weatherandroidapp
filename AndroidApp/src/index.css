@@ -32,15 +32,107 @@ body {
 }
 
 .app-container { max-width: 980px; margin: 0 auto; padding: 16px 20px; min-height: 100vh; background: transparent; }
+.pull-to-refresh-container { 
+  position: relative; 
+  width: 100%; 
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  height: 100%;
+}
+.pull-to-refresh-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(11, 16, 32, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 999;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.pull-to-refresh-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 1000;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+.pull-to-refresh-indicator.visible {
+  opacity: 1;
+}
+.pull-to-refresh-spinner {
+  font-size: 24px;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+.refresh-spinner {
+  animation: spin 1s linear infinite;
+  font-size: 28px;
+}
+.refresh-ready {
+  color: var(--accent);
+  font-size: 24px;
+}
+.refresh-pull {
+  color: var(--muted);
+  font-size: 24px;
+  transition: transform 0.2s;
+}
+.pull-to-refresh-text {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  text-align: center;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 .app-header { text-align: center; margin-bottom: 20px; }
 .app-header h1 { margin: 0; font-size: 28px; letter-spacing: 0.4px; }
 .subtitle { margin-top: 6px; color: var(--muted); }
 
-.search-container { margin: 12px auto 0; display: flex; flex-direction: row; align-items: flex-start; gap: 8px; max-width: 520px; position: relative; }
-.searchbox { flex: 1; display: flex; flex-direction: column; position: relative; min-width: 0; }
-.search-input { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.06); color: var(--text); outline: none; font-size: 16px; -webkit-user-select: text; user-select: text; min-width: 0; }
+.search-container { margin: 12px auto 0; display: flex; flex-direction: row; align-items: flex-start; gap: 8px; max-width: 520px; position: relative; z-index: 26; }
+.searchbox { flex: 1; display: flex; flex-direction: column; position: relative; min-width: 0; z-index: 27; }
+.search-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(11, 16, 32, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 25;
+  pointer-events: auto;
+  animation: fadeIn 0.2s ease;
+  cursor: pointer;
+}
+.search-input { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.06); color: var(--text); outline: none; font-size: 16px; -webkit-user-select: text; user-select: text; min-width: 0; position: relative; z-index: 28; }
 .search-input::placeholder { color: #93a0c4; }
-.search-dropdown { position: absolute; top: 44px; left: 0; right: 0; background: #0f1530; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; z-index: 30; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.search-dropdown { position: absolute; top: 44px; left: 0; right: 0; background: #0f1530; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; z-index: 30; box-shadow: 0 8px 24px rgba(0,0,0,0.4); pointer-events: auto; }
 .search-dropdown.empty { padding: 10px 12px; color: var(--muted); }
 .search-item { width: 100%; text-align: left; background: transparent; color: var(--text); border: none; padding: 12px; display: flex; justify-content: space-between; gap: 10px; cursor: pointer; min-height: 44px; -webkit-tap-highlight-color: transparent; }
 .search-item:hover { background: rgba(255,255,255,0.06); }
@@ -64,6 +156,8 @@ body {
   flex-shrink: 0;
   width: 44px;
   height: 44px;
+  position: relative;
+  z-index: 28;
 }
 .save-location-btn:hover {
   background: rgba(255,255,255,0.08);

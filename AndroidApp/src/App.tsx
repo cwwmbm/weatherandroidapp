@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { fetchDailyForecast, type DailyForecast, fetchHourlyForecast, type HourlyForecast } from './services/openMeteo';
 import { WeatherCard } from './components/WeatherCard';
 import { HourlyRow } from './components/HourlyRow';
@@ -8,6 +8,7 @@ import { DailyForecastList } from './components/DailyForecastList';
 import { localDateTimeFromISOMinute } from './utils/date';
 import { SearchBox } from './components/SearchBox';
 import { SaveLocationButton } from './components/SaveLocationButton';
+import { PullToRefresh } from './components/PullToRefresh';
 import type { GeocodeResult } from './services/geocoding';
 import { getCurrentLocation } from './services/location';
 
@@ -62,6 +63,31 @@ function App() {
     }
   }, [locationRequested]);
 
+  // Function to fetch weather data
+  const fetchWeatherData = useCallback(async () => {
+    if (!coords) return;
+    
+    setLoading(true);
+    console.log('Fetching weather for:', coords.latitude, coords.longitude, coords.label);
+    
+    try {
+      const [dailyData, hourlyData] = await Promise.all([
+        fetchDailyForecast({ latitude: coords.latitude, longitude: coords.longitude, days: 14 }),
+        fetchHourlyForecast({ latitude: coords.latitude, longitude: coords.longitude, hours: 48 })
+      ]);
+      
+      console.log('Weather data received for coordinates:', coords.latitude, coords.longitude);
+      setForecast(dailyData);
+      setHourly(hourlyData);
+      setError(null);
+    } catch (err: unknown) {
+      console.error('Weather fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load forecast');
+    } finally {
+      setLoading(false);
+    }
+  }, [coords]);
+
   // Step 2: Fetch weather ONLY after coordinates are set (either from location or fallback)
   useEffect(() => {
     // Don't fetch weather until we have coordinates
@@ -69,33 +95,13 @@ function App() {
       return;
     }
     
-    let isMounted = true;
-    setLoading(true);
-    console.log('Step 2: Fetching weather for:', coords.latitude, coords.longitude, coords.label);
-    
-    Promise.all([
-      fetchDailyForecast({ latitude: coords.latitude, longitude: coords.longitude, days: 14 }),
-      fetchHourlyForecast({ latitude: coords.latitude, longitude: coords.longitude, hours: 48 })
-    ])
-      .then(([dailyData, hourlyData]) => {
-        if (!isMounted) return;
-        console.log('Step 2: Weather data received for coordinates:', coords.latitude, coords.longitude);
-        setForecast(dailyData);
-        setHourly(hourlyData);
-      })
-      .catch((err: unknown) => {
-        if (!isMounted) return;
-        console.error('Weather fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load forecast');
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setLoading(false);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [coords]);
+    fetchWeatherData();
+  }, [coords, fetchWeatherData]);
+
+  // Handle pull-to-refresh
+  const handleRefresh = useCallback(async () => {
+    await fetchWeatherData();
+  }, [fetchWeatherData]);
 
   const title = useMemo(() => 'Weather Forecast', []);
 
@@ -129,17 +135,19 @@ function App() {
           )}
         </div>
       </header>
-      <main>
-        {loading && <div className="status">Loading…</div>}
-        {error && <div className="status error">{error}</div>}
-        {forecast && hourly && (
-          <>
-            <NowSection hourly={hourly} today={forecast.days[0] || null} />
-            <HourlyForecastSection hourly={hourly} />
-            <DailyForecastList forecast={forecast} />
-          </>
-        )}
-      </main>
+      <PullToRefresh onRefresh={handleRefresh}>
+        <main>
+          {loading && <div className="status">Loading…</div>}
+          {error && <div className="status error">{error}</div>}
+          {forecast && hourly && (
+            <>
+              <NowSection hourly={hourly} today={forecast.days[0] || null} />
+              <HourlyForecastSection hourly={hourly} />
+              <DailyForecastList forecast={forecast} />
+            </>
+          )}
+        </main>
+      </PullToRefresh>
       <footer className="app-footer">
         <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Data by Open‑Meteo</a>
       </footer>
