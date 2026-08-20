@@ -1,3 +1,5 @@
+import { isoDateInTimeZone, isoMinuteInTimeZone, unixSecondsToDate } from '../utils/date';
+
 export type DailyForecastDay = {
   date: string; // ISO date
   weatherCode: number;
@@ -24,7 +26,8 @@ export async function fetchDailyForecast({ latitude, longitude, days }: FetchDai
   url.searchParams.set('latitude', latitude.toString());
   url.searchParams.set('longitude', longitude.toString());
   url.searchParams.set('daily', 'weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max');
-  url.searchParams.set('timezone', 'America/Vancouver');
+  url.searchParams.set('timezone', 'auto');
+  url.searchParams.set('timeformat', 'unixtime');
   url.searchParams.set('temperature_unit', 'celsius');
   if (days) url.searchParams.set('forecast_days', String(days));
 
@@ -34,8 +37,8 @@ export async function fetchDailyForecast({ latitude, longitude, days }: FetchDai
   }
   const json = await res.json();
 
-  const timezone: string = json.timezone;
-  const time: string[] = json.daily?.time ?? [];
+  const timezone: string = json.timezone ?? 'UTC';
+  const time: number[] = json.daily?.time ?? [];
   const weathercode: number[] = json.daily?.weathercode ?? [];
   const temperatureMax: number[] = json.daily?.temperature_2m_max ?? [];
   const temperatureMin: number[] = json.daily?.temperature_2m_min ?? [];
@@ -49,7 +52,7 @@ export async function fetchDailyForecast({ latitude, longitude, days }: FetchDai
   const daysParsed: DailyForecastDay[] = [];
   for (let i = 0; i < length; i++) {
     daysParsed.push({
-      date: time[i],
+      date: isoDateInTimeZone(unixSecondsToDate(time[i]), timezone),
       weatherCode: weathercode[i],
       temperatureMax: temperatureMax[i],
       temperatureMin: temperatureMin[i],
@@ -62,7 +65,8 @@ export async function fetchDailyForecast({ latitude, longitude, days }: FetchDai
 }
 
 export type HourlyForecastHour = {
-  time: string; // ISO datetime in requested timezone
+  time: string; // YYYY-MM-DDTHH:mm in the location timezone
+  timeUnix: number; // UTC epoch seconds
   weatherCode: number;
   temperatureC: number;
   precipitationMm: number; // per hour
@@ -86,15 +90,16 @@ export async function fetchHourlyForecast({ latitude, longitude, hours }: FetchH
   url.searchParams.set('latitude', latitude.toString());
   url.searchParams.set('longitude', longitude.toString());
   url.searchParams.set('hourly', 'weathercode,temperature_2m,precipitation,precipitation_probability,is_day');
-  url.searchParams.set('timezone', 'America/Vancouver');
+  url.searchParams.set('timezone', 'auto');
+  url.searchParams.set('timeformat', 'unixtime');
   url.searchParams.set('temperature_unit', 'celsius');
 
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Open-Meteo error: ${res.status}`);
   const json = await res.json();
 
-  const timezone: string = json.timezone;
-  const time: string[] = json.hourly?.time ?? [];
+  const timezone: string = json.timezone ?? 'UTC';
+  const time: number[] = json.hourly?.time ?? [];
   const weathercode: number[] = json.hourly?.weathercode ?? [];
   const temperature: number[] = json.hourly?.temperature_2m ?? [];
   const precipitation: number[] = json.hourly?.precipitation ?? [];
@@ -115,7 +120,8 @@ export async function fetchHourlyForecast({ latitude, longitude, hours }: FetchH
   const hoursParsed: HourlyForecastHour[] = [];
   for (let i = 0; i < length; i++) {
     hoursParsed.push({
-      time: time[i],
+      time: isoMinuteInTimeZone(unixSecondsToDate(time[i]), timezone),
+      timeUnix: time[i],
       weatherCode: weathercode[i],
       temperatureC: temperature[i],
       precipitationMm: precipitation[i],
@@ -126,4 +132,3 @@ export async function fetchHourlyForecast({ latitude, longitude, hours }: FetchH
 
   return { timezone, hours: hoursParsed };
 }
-

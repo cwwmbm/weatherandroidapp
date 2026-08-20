@@ -1,14 +1,18 @@
-import { type DailyForecastDay } from '../services/openMeteo';
-import { weatherCodeToIcon, weatherCodeToLabel } from '../utils/weatherCodeToIcon';
+import { type DailyForecastDay, type HourlyForecast } from '../services/openMeteo';
+import { classifyDailyDisplay } from '../utils/dailyWeatherDisplay';
+import { dailyDisplayToIcon } from '../utils/dailyDisplayIcon';
+import { getHourlyBreakdownForDate } from '../utils/hourlyByDate';
 import { localDateFromISODate } from '../utils/date';
 
 type Props = {
   day: DailyForecastDay;
+  hourly: HourlyForecast;
 };
 
-export function WeatherCard({ day }: Props) {
-  const icon = weatherCodeToIcon(day.weatherCode, true);
-  const label = weatherCodeToLabel(day.weatherCode);
+export function WeatherCard({ day, hourly }: Props) {
+  const display = classifyDailyDisplay(day, getHourlyBreakdownForDate(hourly, day.date));
+  const icon = dailyDisplayToIcon(display.kind);
+  const label = display.label;
   const date = localDateFromISODate(day.date);
   const weekday = date.toLocaleDateString(undefined, { weekday: 'short' });
   const monthDay = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });

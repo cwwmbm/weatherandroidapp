@@ -29,7 +29,7 @@ export function weatherCodeToIcon(code: number, isDay: boolean = true): React.Re
   if (code === 1 || code === 2) return isDay ? '🌤️' : <NightPartlyCloudyIcon />;
   if (code === 3) return '☁️';
   if ([45, 48].includes(code)) return '🌫️';
-  if ([51, 53, 55].includes(code)) return isDay ? '🌦️' : '🌧️';
+  if ([51, 53, 55].includes(code)) return '🌧️';
   if ([56, 57].includes(code)) return isDay ? '🧊🌦️' : '🧊🌧️';
   if ([61, 63, 65].includes(code)) return '🌧️';
   if ([66, 67].includes(code)) return '🧊🌧️';

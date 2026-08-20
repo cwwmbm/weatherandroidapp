@@ -3,8 +3,7 @@ import { App } from '@capacitor/app';
 import { type HourlyForecast } from '../services/openMeteo';
 import { type DailyForecastDay } from '../services/openMeteo';
 import { weatherCodeToIcon, weatherCodeToLabel } from '../utils/weatherCodeToIcon';
-import { localDateTimeFromISOMinute } from '../utils/date';
-import { localDateFromISODate } from '../utils/date';
+import { formatTimeInTimeZone, localDateFromISODate, nowISODateInTimeZone } from '../utils/date';
 
 type Props = {
   date: string;
@@ -34,36 +33,17 @@ export function DayHourlyModal({ date, hourly, dailyDay, onClose }: Props) {
       }
     };
   }, [onClose]);
-  const selectedDate = localDateFromISODate(date);
-  selectedDate.setHours(0, 0, 0, 0);
-  const nextDate = new Date(selectedDate);
-  nextDate.setDate(nextDate.getDate() + 1);
+  const dayHours = hourly.hours.filter(hour => hour.time.startsWith(date));
 
-  // Filter hourly forecast to the selected day
-  // Compare dates using string comparison to avoid timezone issues
-  const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
-  
-  const dayHours = hourly.hours.filter(hour => {
-    // Extract date part from ISO datetime string (format: YYYY-MM-DDTHH:mm)
-    const hourDateStr = hour.time.split('T')[0];
-    return hourDateStr === selectedDateStr;
-  });
-
-  const formatTime = (timeStr: string) => {
-    const date = localDateTimeFromISOMinute(timeStr);
-    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const formatTime = (hourUnix: number) => {
+    return formatTimeInTimeZone(hourUnix, hourly.timezone, { hour: 'numeric', minute: '2-digit' });
   };
 
   const formatDate = (dateStr: string) => {
-    const date = localDateFromISODate(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const dateOnly = new Date(date);
-    dateOnly.setHours(0, 0, 0, 0);
-    
-    if (dateOnly.getTime() === today.getTime()) {
+    if (dateStr === nowISODateInTimeZone(hourly.timezone)) {
       return 'Today';
     }
+    const date = localDateFromISODate(dateStr);
     
     const weekday = date.toLocaleDateString(undefined, { weekday: 'long' });
     const monthDay = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -109,7 +89,7 @@ export function DayHourlyModal({ date, hourly, dailyDay, onClose }: Props) {
           <div className="day-hourly-list">
             {dayHours.map((hour) => {
               const icon = weatherCodeToIcon(hour.weatherCode, hour.isDay !== false);
-              const timeLabel = formatTime(hour.time);
+              const timeLabel = formatTime(hour.timeUnix);
               
               return (
                 <div key={hour.time} className="day-hourly-item">

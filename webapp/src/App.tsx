@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { fetchDailyForecast, type DailyForecast, fetchHourlyForecast, type HourlyForecast } from './services/openMeteo';
 import { WeatherCard } from './components/WeatherCard';
 import { HourlyRow } from './components/HourlyRow';
-import { localDateTimeFromISOMinute } from './utils/date';
 import { SearchBox } from './components/SearchBox';
 import type { GeocodeResult } from './services/geocoding';
 
@@ -76,11 +75,11 @@ function App() {
         {tab === 'hourly' && hourly && (
           <div className="hourly-list">
             {(() => {
-              const now = new Date();
-              const startIdx = hourly.hours.findIndex(h => localDateTimeFromISOMinute(h.time) >= now);
+              const nowUnix = Date.now() / 1000;
+              const startIdx = hourly.hours.findIndex(h => h.timeUnix + 3600 > nowUnix);
               const sliced = startIdx >= 0 ? hourly.hours.slice(startIdx) : hourly.hours;
               return sliced.map((h) => (
-                <HourlyRow key={h.time} hour={h} />
+                <HourlyRow key={h.timeUnix} hour={h} timeZone={hourly.timezone} />
               ));
             })()}
           </div>

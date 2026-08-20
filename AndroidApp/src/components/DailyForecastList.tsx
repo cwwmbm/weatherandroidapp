@@ -1,27 +1,23 @@
-import { type DailyForecast } from '../services/openMeteo';
-import { weatherCodeToIcon, weatherCodeToLabel } from '../utils/weatherCodeToIcon';
-import { localDateFromISODate } from '../utils/date';
+import { type DailyForecast, type HourlyForecast } from '../services/openMeteo';
+import { classifyDailyDisplay } from '../utils/dailyWeatherDisplay';
+import { dailyDisplayToIcon } from '../utils/dailyDisplayIcon';
+import { getHourlyBreakdownForDate } from '../utils/hourlyByDate';
+import { localDateFromISODate, nowISODateInTimeZone } from '../utils/date';
 
 type Props = {
   forecast: DailyForecast;
+  hourly: HourlyForecast;
   onDayClick?: (date: string) => void;
 };
 
-export function DailyForecastList({ forecast, onDayClick }: Props) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+export function DailyForecastList({ forecast, hourly, onDayClick }: Props) {
+  const todayStr = nowISODateInTimeZone(forecast.timezone);
 
   const formatDate = (dateStr: string, index: number) => {
-    const date = localDateFromISODate(dateStr);
-    const dateOnly = new Date(date);
-    dateOnly.setHours(0, 0, 0, 0);
-    
-    const todayOnly = new Date(today);
-    todayOnly.setHours(0, 0, 0, 0);
-    
-    if (dateOnly.getTime() === todayOnly.getTime()) {
+    if (dateStr === todayStr) {
       return 'Today';
     }
+    const date = localDateFromISODate(dateStr);
     
     const weekday = date.toLocaleDateString(undefined, { weekday: 'long' });
     const monthDay = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -33,8 +29,9 @@ export function DailyForecastList({ forecast, onDayClick }: Props) {
       <div className="section-header">10-day forecast</div>
       <div className="daily-list">
         {forecast.days.map((day, index) => {
-          const icon = weatherCodeToIcon(day.weatherCode, true);
-          const condition = weatherCodeToLabel(day.weatherCode);
+          const display = classifyDailyDisplay(day, getHourlyBreakdownForDate(hourly, day.date));
+          const icon = dailyDisplayToIcon(display.kind);
+          const condition = display.label;
           const dateLabel = formatDate(day.date, index);
           
           return (

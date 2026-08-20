@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { fetchDailyForecast, type DailyForecast, fetchHourlyForecast, type HourlyForecast } from './services/openMeteo';
-import { WeatherCard } from './components/WeatherCard';
 import { HourlyRow } from './components/HourlyRow';
 import { NowSection } from './components/NowSection';
 import { HourlyForecastSection } from './components/HourlyForecastSection';
@@ -23,12 +22,21 @@ function App() {
   // Start with null coordinates - will be set after geolocation
   const [coords, setCoords] = useState<{ latitude: number; longitude: number; label: string } | null>(null);
   const [locationRequested, setLocationRequested] = useState<boolean>(false);
+  
+  // Track when we're fetching location or weather (for loading backdrop)
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState<string>('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
+
+  const showFrostBackdrop = isFetchingLocation || isSearchActive;
 
   // Step 1: Get user's current location on mount
   useEffect(() => {
     if (!locationRequested) {
       setLocationRequested(true);
       setLoading(true);
+      setIsFetchingLocation(true);
+      setLoadingMessage('Getting your location...');
       console.log('Step 1: Requesting location...');
       
       // Don't check isMounted - just set the state
@@ -46,6 +54,7 @@ function App() {
           
           console.log('Step 1: Setting coords to:', location);
           setCoords(location);
+          setLoadingMessage('Loading weather forecast...');
           console.log('Step 1: Coords set via setCoords');
         })
         .catch((err) => {
@@ -57,6 +66,7 @@ function App() {
             longitude: -123.1207,
             label: 'Vancouver, BC, Canada'
           });
+          setLoadingMessage('Loading weather forecast...');
           setError('Could not detect your location. Using default location. You can search for a city.');
           setTimeout(() => {
             setError(null);
@@ -66,10 +76,14 @@ function App() {
   }, [locationRequested]);
 
   // Function to fetch weather data
-  const fetchWeatherData = useCallback(async () => {
+  const fetchWeatherData = useCallback(async (showLoadingUI: boolean = false) => {
     if (!coords) return;
     
     setLoading(true);
+    if (showLoadingUI) {
+      setIsFetchingLocation(true);
+      setLoadingMessage('Loading weather forecast...');
+    }
     console.log('Fetching weather for:', coords.latitude, coords.longitude, coords.label);
     
     try {
@@ -87,6 +101,10 @@ function App() {
       setError(err instanceof Error ? err.message : 'Failed to load forecast');
     } finally {
       setLoading(false);
+      if (showLoadingUI) {
+        setIsFetchingLocation(false);
+        setLoadingMessage('');
+      }
     }
   }, [coords]);
 
@@ -97,38 +115,68 @@ function App() {
       return;
     }
     
-    fetchWeatherData();
-  }, [coords, fetchWeatherData]);
+    // If we're already showing loading UI (from location selection), pass that flag
+    // Otherwise, fetch without showing the backdrop (for initial load)
+    fetchWeatherData(isFetchingLocation);
+  }, [coords, fetchWeatherData, isFetchingLocation]);
 
   // Handle pull-to-refresh
   const handleRefresh = useCallback(async () => {
-    await fetchWeatherData();
+    setIsFetchingLocation(true);
+    setLoadingMessage('Refreshing weather forecast...');
+    await fetchWeatherData(true);
   }, [fetchWeatherData]);
 
   const title = useMemo(() => 'Weather Forecast', []);
 
   return (
     <div className="app-container">
+      {showFrostBackdrop && (
+        <>
+          <div
+            className="search-backdrop"
+            aria-hidden={!isSearchActive}
+            onClick={() => {
+              if (isSearchActive) {
+                (document.activeElement as HTMLElement)?.blur();
+              }
+            }}
+          />
+          {isFetchingLocation && loadingMessage && (
+            <div className="loading-message">{loadingMessage}</div>
+          )}
+        </>
+      )}
       <header className="app-header">
         <h1>{title}</h1>
         <p className="subtitle">Weather in 
           <strong> {coords?.label || 'Loading location...'}</strong>
         </p>
-        <div className="search-container">
+        <div className={`search-container ${showFrostBackdrop ? 'above-backdrop' : ''} ${isSearchActive ? 'search-active' : ''}`}>
           <SearchBox 
-            onPick={(place: GeocodeResult) => {
+            onSearchActiveChange={setIsSearchActive}
+            onPick={async (place: GeocodeResult) => {
+              setIsFetchingLocation(true);
+              setLoadingMessage('Loading weather forecast...');
               const label = `${place.name}${place.admin1 ? ', ' + place.admin1 : ''}, ${place.country}`;
               setCoords({ latitude: place.latitude, longitude: place.longitude, label });
+              // Weather will be fetched by useEffect, but we need to wait for it
+              // The useEffect will pass showLoadingUI=true since isFetchingLocation is true
             }}
             currentLocation={coords}
             onSelectCurrentLocation={async () => {
+              setIsFetchingLocation(true);
+              setLoadingMessage('Getting your location...');
               try {
                 const location = await getCurrentLocation();
                 setCoords(location);
+                setLoadingMessage('Loading weather forecast...');
               } catch (error) {
                 console.error('Error getting current location:', error);
                 setError('Could not detect your location. Please try again.');
                 setTimeout(() => setError(null), 5000);
+                setIsFetchingLocation(false);
+                setLoadingMessage('');
               }
             }}
           />
@@ -146,7 +194,8 @@ function App() {
               <NowSection hourly={hourly} today={forecast.days[0] || null} />
               <HourlyForecastSection hourly={hourly} />
               <DailyForecastList 
-                forecast={forecast} 
+                forecast={forecast}
+                hourly={hourly}
                 onDayClick={(date) => setSelectedDay(date)}
               />
             </>

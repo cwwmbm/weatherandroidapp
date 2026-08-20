@@ -1,7 +1,6 @@
 import { type HourlyForecast } from '../services/openMeteo';
 import { type DailyForecastDay } from '../services/openMeteo';
 import { weatherCodeToIcon, weatherCodeToLabel } from '../utils/weatherCodeToIcon';
-import { localDateTimeFromISOMinute } from '../utils/date';
 
 type Props = {
   hourly: HourlyForecast;
@@ -9,12 +8,11 @@ type Props = {
 };
 
 export function NowSection({ hourly, today }: Props) {
-  // Get current hour's weather
-  const now = new Date();
-  const currentHour = hourly.hours.find(h => {
-    const hourTime = localDateTimeFromISOMinute(h.time);
-    return hourTime <= now && hourTime.getTime() > now.getTime() - 3600000; // Within last hour
-  }) || hourly.hours[0]; // Fallback to first hour
+  const nowUnix = Date.now() / 1000;
+  const currentHour =
+    hourly.hours.find(h => nowUnix >= h.timeUnix && nowUnix < h.timeUnix + 3600) ||
+    hourly.hours.find(h => h.timeUnix >= nowUnix) ||
+    hourly.hours[0];
 
   const icon = weatherCodeToIcon(currentHour.weatherCode, currentHour.isDay !== false);
   const condition = weatherCodeToLabel(currentHour.weatherCode);

@@ -7,9 +7,17 @@ type Props = {
   onPick: (place: GeocodeResult) => void;
   currentLocation: { latitude: number; longitude: number; label: string } | null;
   onSelectCurrentLocation?: () => void;
+  onDropdownOpenChange?: (isOpen: boolean) => void;
+  onSearchActiveChange?: (active: boolean) => void;
 };
 
-export function SearchBox({ onPick, currentLocation, onSelectCurrentLocation }: Props) {
+export function SearchBox({
+  onPick,
+  currentLocation,
+  onSelectCurrentLocation,
+  onDropdownOpenChange,
+  onSearchActiveChange,
+}: Props) {
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<GeocodeResult[]>([]);
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
@@ -68,6 +76,15 @@ export function SearchBox({ onPick, currentLocation, onSelectCurrentLocation }: 
     };
   }, [query, isFocused]);
 
+  // Notify parent when dropdown open state changes
+  useEffect(() => {
+    onDropdownOpenChange?.(open);
+  }, [open, onDropdownOpenChange]);
+
+  useEffect(() => {
+    onSearchActiveChange?.(isFocused);
+  }, [isFocused, onSearchActiveChange]);
+
   const handleCurrentLocation = async () => {
     if (onSelectCurrentLocation) {
       onSelectCurrentLocation();
@@ -112,9 +129,6 @@ export function SearchBox({ onPick, currentLocation, onSelectCurrentLocation }: 
 
   return (
     <div className="searchbox">
-      {open && (
-        <div className="search-backdrop" />
-      )}
       <input
         className="search-input"
         placeholder="Search city or town…"
@@ -142,17 +156,7 @@ export function SearchBox({ onPick, currentLocation, onSelectCurrentLocation }: 
               className="search-item current-location-item"
               onClick={handleCurrentLocation}
             >
-              <span className="place-name">📍 Current</span>
-              <span className="place-meta">
-                {currentLocation ? (() => {
-                  // Extract just city and country
-                  const parts = currentLocation.label.split(',');
-                  if (parts.length >= 2) {
-                    return `${parts[0].trim()}, ${parts[parts.length - 1].trim()}`;
-                  }
-                  return currentLocation.label;
-                })() : 'Detect your location'}
-              </span>
+              <span className="place-name">📍 Current Location</span>
             </button>
           )}
           {showCurrentLocation && showSavedLocations && (
